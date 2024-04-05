@@ -72,7 +72,7 @@ class W2V:
         else:
             self.args = args
             # Instantiate model
-            self.model_w2v = Word2Vec(min_count=10, window=5, size=W2V_SIZE, sample=1e-3, negative=5,
+            self.model_w2v = Word2Vec(min_count=10, window=5, vector_size=W2V_SIZE, sample=1e-3, negative=5,
                             workers=self.args.workers, sg=self.args.sg, seed=3778)
 
 
@@ -98,14 +98,17 @@ class W2V:
             Training embeddings...
             ''')
 
-        token_review = dataset.x_train.pipe(utils.preprocessor)
+        token_review = dataset.x_train.pipe(utils.preprocessor_word2vec)
 
         # Build vocab over train samples
+        print("Building vocabulary...")
         self.model_w2v.build_vocab(token_review)
 
         # We pass through the data set multiple times, shuffling the training reviews each time to improve accuracy.
+        print("Start training...")
         t0 = time()
-        for _ in range(5):
+        for i in range(5):
+            print(f"i={i+1}")
             self.model_w2v.train(np.random.permutation(token_review), 
                             total_examples=self.model_w2v.corpus_count, 
                             epochs=self.model_w2v.epochs)

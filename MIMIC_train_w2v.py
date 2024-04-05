@@ -23,6 +23,7 @@ def main(args):
     # Load dataset
     mimic = datasets.MIMIC_Dataset()
     mimic.load_preprocessed()
+    # print(mimic.df)
     mimic.split()
     
     # Instantiate embedding

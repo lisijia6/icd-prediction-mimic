@@ -33,16 +33,18 @@ class MIMIC_Dataset:
             self.df = pickle.load(file)
 
     def save_preprocessed(self, path=DATA_DIR):
+        print("Saving preprocessed...")
         pd.to_pickle(self.df, f'{path}mimic3_data.pkl')
 
     def preprocess(self, verbose=1):
-
+        print("Preprocessing NOTEEVENTS...")
         df_text = (pd.read_csv(f'{DATA_DIR}NOTEEVENTS.csv.gz')
                 .query("CATEGORY == 'Discharge summary'")
                 .drop_duplicates('TEXT')
                 .drop_duplicates('HADM_ID')
                 [['SUBJECT_ID','HADM_ID','TEXT']])
 
+        print("Preprocessing DIAGNOSES_ICD...")
         df_icds = (pd.read_csv(f'{DATA_DIR}DIAGNOSES_ICD.csv.gz')
                     .dropna()
                     .groupby('HADM_ID')
@@ -82,13 +84,23 @@ class MIMIC_Dataset:
         # Get most occurring icds in training set
         self.all_icds_train = utils.make_icds_histogram(self.df[self.df['HADM_ID'].isin(hadm_ids[0])]).index.tolist()
 
-        ((self.x_train, self.y_train),
-         (self.x_val, self.y_val),
-         (self.x_test, self.y_test)) = [
-             (self.df[self.df['HADM_ID'].isin(ids)]['TEXT'], 
-             self.mlb.transform(self.df[self.df['HADM_ID'].isin(ids)]['ICD9_CODE']))
-             for ids in hadm_ids
-             ]
+        # ((self.x_train, self.y_train),
+        #  (self.x_val, self.y_val),
+        #  (self.x_test, self.y_test)) = [
+        #      (self.df[self.df['HADM_ID'].isin(ids)]['TEXT'], 
+        #      self.mlb.transform(self.df[self.df['HADM_ID'].isin(ids)]['ICD9_CODE']))
+        #      for ids in hadm_ids
+        #      ]
+        for idx, ids in enumerate(hadm_ids):
+            ids = [int(i) for i in ids]
+            temp = (self.df[self.df['HADM_ID'].isin(ids)]['TEXT'], 
+                    self.mlb.transform(self.df[self.df['HADM_ID'].isin(ids)]['ICD9_CODE']))
+            if idx == 0:
+                (self.x_train, self.y_train) = temp
+            elif idx == 1: 
+                (self.x_val, self.y_val) = temp
+            elif idx == 2:
+                (self.x_test, self.y_test) = temp
 
         
         if verbose:
