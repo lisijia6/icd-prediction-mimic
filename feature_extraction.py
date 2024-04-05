@@ -16,6 +16,7 @@ import numpy as np
 from time import time
 import random
 import pickle
+import tensorflow
 
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -38,6 +39,7 @@ class TFIDF:
     def __init__(self, args):
         self.args = args
         self.tfidf = TfidfVectorizer(stop_words = STOP_WORDS.words('english'), max_features=self.args.max_features)
+        print("Num GPUs Available: ", len(tensorflow.config.experimental.list_physical_devices('GPU')))
 
     def fit(self, dataset): 
 
@@ -74,6 +76,7 @@ class W2V:
             # Instantiate model
             self.model_w2v = Word2Vec(min_count=10, window=5, vector_size=W2V_SIZE, sample=1e-3, negative=5,
                             workers=self.args.workers, sg=self.args.sg, seed=3778)
+        print("Num GPUs Available: ", len(tensorflow.config.experimental.list_physical_devices('GPU')))
 
 
     def init_from_file(self): # substitutes load_embedding
@@ -118,17 +121,18 @@ class W2V:
             Time taken for Word2vec training: {elapsed:.2f} seconds.
             ''')
 
-
+        print("Creating word embedding matrix and dictionary...")
         # Create word embedding matrix
-        self.embedding_matrix = self.model_w2v.wv[self.model_w2v.wv.vocab]
+        self.embedding_matrix = self.model_w2v.wv[self.model_w2v.wv.key_to_index]
 
         # Create dict for embedding matrix (word <-> row)
-        self.row_dict=dict({word:idx for idx,word in enumerate(self.model_w2v.wv.vocab)})
+        self.row_dict=dict({word:idx for idx,word in enumerate(self.model_w2v.wv.key_to_index)})
 
+        print("Mapping unknown and padding tokens to null...")
         # Create and map unknown and padding tokens to null
         self.embedding_matrix = np.concatenate((self.embedding_matrix, np.zeros((2,W2V_SIZE))), axis=0)
-        self.row_dict['_unknown_'] = len(self.model_w2v.wv.vocab)
-        self.row_dict['_padding_'] = len(self.model_w2v.wv.vocab) + 1
+        self.row_dict['_unknown_'] = len(self.model_w2v.wv.key_to_index)
+        self.row_dict['_padding_'] = len(self.model_w2v.wv.key_to_index) + 1
 
         if self.args.reset_stopwords:
             stopwords = STOP_WORDS.words('english')
